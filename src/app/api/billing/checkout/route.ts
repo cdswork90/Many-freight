@@ -8,6 +8,7 @@ export async function POST(req:NextRequest){
  if(!process.env.STRIPE_SECRET_KEY||!process.env.STRIPE_PRICE_ID)return NextResponse.json({error:"Billing is not configured. Set Stripe secret and price IDs."},{status:503});
  let body:{additionalDrivers?:unknown}={};
  try{body=await req.json();}catch{return NextResponse.json({error:"Invalid checkout request."},{status:400});}
+ if(!body||typeof body!=="object"||Array.isArray(body))return NextResponse.json({error:"Invalid checkout request."},{status:400});
  const additionalDrivers=body.additionalDrivers??0;
  if(typeof additionalDrivers!=="number"||!Number.isInteger(additionalDrivers)||additionalDrivers<0||additionalDrivers>999)return NextResponse.json({error:"Choose between 0 and 999 additional drivers."},{status:400});
  const activeDrivers=await prisma.driver.count({where:{companyId:session.companyId,active:true}});
