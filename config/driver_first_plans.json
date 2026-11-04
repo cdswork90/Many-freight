@@ -12,43 +12,27 @@
   ],
   "plans": [
     {
-      "id": "invited_driver",
-      "name": "Invited Driver",
-      "monthly_usd": 0,
-      "requires_company_invitation": true,
-      "features": [
-        "assigned_loads",
-        "delivery_documents",
-        "contact_log"
-      ]
-    },
-    {
       "id": "owner_operator",
-      "name": "Owner-Operator",
-      "monthly_usd": null,
-      "price_status": "pending_owner_approval",
+      "name": "Many Freight",
+      "monthly_usd": 60,
+      "included_drivers": 1,
+      "additional_driver_monthly_usd": 19.95,
+      "currency": "USD",
+      "billing_interval": "month",
+      "price_status": "owner_approved",
       "features": [
         "load_management",
         "invoicing",
         "expenses",
         "mileage",
         "documents",
-        "customer_contacts"
-      ]
-    },
-    {
-      "id": "small_fleet",
-      "name": "Small Fleet",
-      "monthly_usd": null,
-      "price_status": "pending_owner_approval",
-      "features": [
+        "customer_contacts",
         "driver_management",
         "dispatch",
-        "fleet_reports",
-        "owner_operator_tools"
+        "fleet_reports"
       ]
     }
   ],
   "billing_enabled": false,
-  "notes": "Configuration proposal only. Enforce authorization and subscription entitlements server-side; do not trust client configuration. No broker checkout."
+  "notes": "Owner-approved pricing: $60 per month includes one driver; $19.95 per additional driver per month. Activation awaits Stripe provisioning and end-to-end verification. Enforce driver quantities and subscription access server-side. No broker tiers."
 }
