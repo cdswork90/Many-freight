@@ -1,0 +1,54 @@
+{
+  "product": "MANY FREIGHT",
+  "positioning": "driver_owner_operator_first",
+  "roles": [
+    "driver",
+    "owner_operator",
+    "fleet_admin",
+    "dispatcher"
+  ],
+  "disabled_roles": [
+    "broker"
+  ],
+  "plans": [
+    {
+      "id": "invited_driver",
+      "name": "Invited Driver",
+      "monthly_usd": 0,
+      "requires_company_invitation": true,
+      "features": [
+        "assigned_loads",
+        "delivery_documents",
+        "contact_log"
+      ]
+    },
+    {
+      "id": "owner_operator",
+      "name": "Owner-Operator",
+      "monthly_usd": null,
+      "price_status": "pending_owner_approval",
+      "features": [
+        "load_management",
+        "invoicing",
+        "expenses",
+        "mileage",
+        "documents",
+        "customer_contacts"
+      ]
+    },
+    {
+      "id": "small_fleet",
+      "name": "Small Fleet",
+      "monthly_usd": null,
+      "price_status": "pending_owner_approval",
+      "features": [
+        "driver_management",
+        "dispatch",
+        "fleet_reports",
+        "owner_operator_tools"
+      ]
+    }
+  ],
+  "billing_enabled": false,
+  "notes": "Configuration proposal only. Enforce authorization and subscription entitlements server-side; do not trust client configuration. No broker checkout."
+}
