@@ -2,9 +2,9 @@
 
 Application / brand: **MANY FREIGHT**
 
-Created by: **Visionary Transport LLC**
+Created by (individual): **Christopher Smith**
 
-Software owner: **Visionary Transport LLC**, as stated by the application creator.
+Company associated with the application: **Visionary Transport LLC**. Legal ownership of the software and intellectual property should be confirmed separately.
 
 Platform contracting/operator entity: **Visionary Transport LLC — pending confirmation that this same entity contracts with participating businesses**.
 
@@ -12,7 +12,7 @@ Participating carriers and companies operate under their own applicable authorit
 
 ## Agreement configuration
 
-Use **Visionary Transport LLC** as the proposed Platform party in the participation agreement, subject to confirmation and counsel review. The public-facing MANY FREIGHT brand may appear as “MANY FREIGHT, created by Visionary Transport LLC.”
+Use **Visionary Transport LLC** as the proposed Platform party in the participation agreement, subject to confirmation and counsel review. The public-facing MANY FREIGHT brand may appear as “MANY FREIGHT — Created by Christopher Smith.”
 
 ## Insurance certificate holder
 
