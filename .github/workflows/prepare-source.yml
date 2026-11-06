@@ -1,0 +1,62 @@
+name: Prepare Many Freight application source
+on:
+  push:
+    paths:
+      - .github/workflows/prepare-source.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Extract and validate archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, zipfile, pathlib, shutil, re
+          archive = "many-freight-v1.6.0 (2).zip"
+          destination = pathlib.Path("/tmp/many-freight-extracted")
+          with zipfile.ZipFile(archive) as z:
+              bad = z.testzip()
+              if bad: raise SystemExit("Corrupt ZIP entry: " + bad)
+              for item in z.infolist():
+                  rel = pathlib.PurePosixPath(item.filename)
+                  if rel.is_absolute() or ".." in rel.parts:
+                      raise SystemExit("Unsafe ZIP path")
+                  if not item.is_dir() and (rel.name.startswith(".env") and rel.name != ".env.example"):
+                      raise SystemExit("Real environment file found in archive; extraction stopped")
+                  if not item.is_dir() and rel.name in ("id_rsa", "id_ed25519", ".npmrc"):
+                      raise SystemExit("Potentially sensitive file found; extraction stopped")
+              z.extractall(destination)
+          source = destination / "transtrack-pro"
+          if not (source / "package.json").is_file() or not (source / "prisma/schema.prisma").is_file():
+              raise SystemExit("Expected Next.js and Prisma source not found")
+          for path in source.rglob("*"):
+              if path.is_file() and path.stat().st_size < 2000000:
+                  data = path.read_text(errors="ignore")
+                  if re.search(r"(sk_live_|sk_test_|sb_secret_|SUPABASE_SERVICE_ROLE_KEY\s*=\s*[^\s#]+|OPENAI_API_KEY\s*=\s*sk-)", data):
+                      raise SystemExit("Possible credential in " + str(path) + "; extraction stopped")
+          staging = pathlib.Path("source-preparation")
+          staging.mkdir(exist_ok=True)
+          for child in source.iterdir():
+              target = staging / child.name
+              if child.is_dir(): shutil.copytree(child, target, dirs_exist_ok=True)
+              else: shutil.copy2(child, target)
+          print("Source extracted under source-preparation/; no deployment performed")
+          PY
+      - name: Commit extracted source to review branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B many-freight-source-review
+          git add source-preparation
+          git diff --cached --quiet && exit 0
+          git commit -m "Extract Many Freight source to review directory"
+          git push --force origin many-freight-source-review
