@@ -10,7 +10,9 @@ Account: `acct_1UXutnFHWLhESZ86` (Visionary transport llc sandbox; `livemode=fal
 - Broker additional seat: `price_1UYw59FHWLhESZ861FKkrQVK`, $75.95 monthly.
 - All four prices are active, USD, monthly, tax-exclusive, test mode.
 - Stripe `GET /v1/webhook_endpoints` returned **zero endpoints** for this account at review time. Do not represent webhooks as connected.
+- Stripe Tax sandbox settings `status: active`, head office Sheridan, WY, but `GET /v1/tax/registrations` returned **zero tax registrations**. Active Tax settings do not prove any jurisdiction's collection obligation is configured; do not invent registrations.
 - Vercel project `many-freight` (`prj_sMZo3YGUmeHQiQTGDLdhQT96jsO9`) had the four Stripe price ID variables configured in **preview** but did **not** list `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, or `APP_URL`. The preview code can derive a secure return URL from `VERCEL_URL`; this does not make a missing Stripe key usable.
+- Vercel latest `many-freight-secure-billing-recovery` deployment was `READY` at review, confirming the recovered code branch is deploying (separate from failed `many-freight-source-review` deployments).
 - Vercel's authentication protection is configured for **all** deployments. The authenticated connector was denied with 403 when attempting to create a protection-bypass share link. **Before registering a Stripe webhook, ensure Stripe's servers can reach its exact public webhook URL without Vercel Authentication**, without exposing the rest of the app. Stripe cannot sign in to a protected preview.
 - The owner reported the authenticated `/api/health` page showed `database: connected`. This validates reachability as observed, not subscription, tenant, tax, or security readiness.
 
