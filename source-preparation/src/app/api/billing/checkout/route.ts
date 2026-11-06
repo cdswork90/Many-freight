@@ -85,6 +85,24 @@ export async function POST() {
     await prisma.subscription.update({ where: { companyId: company.id }, data: { stripeCustomerId: customerId } });
   }
 
+  // An earlier open Checkout Session must be completed or expired before
+  // another can be issued. Otherwise two completed sessions could create
+  // two paid subscriptions before the first webhook updates our database.
+  const previousSessions = await stripe.checkout.sessions.list({
+    customer: customerId,
+    limit: 100,
+  });
+  const pending = previousSessions.data.find(
+    (previous) => previous.mode === "subscription" &&
+      (previous.status === "open" || previous.status === "complete"),
+  );
+  if (pending) {
+    return NextResponse.json(
+      { error: "A subscription checkout is already open or pending reconciliation." },
+      { status: 409, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
   const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
     { price: basePrice.id, quantity: 1 },
   ];
