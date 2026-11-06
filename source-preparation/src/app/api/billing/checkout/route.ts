@@ -3,9 +3,9 @@ import Stripe from "stripe";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-// Extra seats are additional internal user logins beyond the company owner.
-// Customer portal logins do not count as paid dispatch/driver seats.
-const paidSeatRoles = ["ADMIN", "DISPATCHER", "DRIVER", "ACCOUNTING"] as const;
+// The $49.95 base plan includes two internal user logins, including the owner.
+// Customer portal accounts and driver contact records without logins do not count.
+const paidSeatRoles = ["OWNER", "ADMIN", "DISPATCHER", "DRIVER", "ACCOUNTING"] as const;
 
 export async function POST() {
   const session = await getSession();
@@ -33,13 +33,14 @@ export async function POST() {
   const seatPrice = await stripe.prices.retrieve(process.env.STRIPE_ADDITIONAL_DRIVER_PRICE_ID);
   const monthly = (p: Stripe.Price) => p.active && !p.livemode && p.currency === "usd" &&
     p.type === "recurring" && p.recurring?.interval === "month" && p.recurring.interval_count === 1;
-  if (!monthly(basePrice) || !monthly(seatPrice) || seatPrice.unit_amount !== 4995 ||
+  if (!monthly(basePrice) || !monthly(seatPrice) || basePrice.unit_amount !== 4995 || seatPrice.unit_amount !== 2495 ||
       basePrice.id === seatPrice.id)
-    return NextResponse.json({ error: "Stripe test prices are not configured for monthly base + $49.95 seats." }, { status: 503 });
+    return NextResponse.json({ error: "Stripe test prices are not configured for $49.95 base (two included seats) + $24.95 extra seats." }, { status: 503 });
 
-  const additionalSeats = await prisma.user.count({
+  const billableSeats = await prisma.user.count({
     where: { companyId: session.companyId, role: { in: [...paidSeatRoles] } },
   });
+  const additionalSeats = Math.max(0, billableSeats - 2);
 
   let customerId = sub.stripeCustomerId;
   if (!customerId) {
@@ -66,7 +67,7 @@ export async function POST() {
     metadata: { companyId: company.id, additionalSeats: String(additionalSeats) },
     subscription_data: { metadata: { companyId: company.id, additionalSeats: String(additionalSeats) } },
   });
-  return NextResponse.json({ url: checkout.url, additionalSeats, seatPriceMonthlyCents: 4995 }, {
+  return NextResponse.json({ url: checkout.url, additionalSeats, includedSeats: 2, basePriceMonthlyCents: 4995, seatPriceMonthlyCents: 2495 }, {
     headers: { "Cache-Control": "no-store" },
   });
 }
