@@ -1,0 +1,226 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+enum ShipmentStatus { DRAFT BOOKED ASSIGNED PICKED_UP IN_TRANSIT DELIVERED CANCELLED }
+enum UserRole { OWNER ADMIN DISPATCHER DRIVER ACCOUNTING CUSTOMER }
+enum DamageSeverity { COSMETIC MINOR MODERATE SEVERE }
+enum SubscriptionStatus { INCOMPLETE TRIALING ACTIVE PAST_DUE CANCELED UNPAID }
+model Company {
+  id String @id @default(cuid())
+  name String
+  dotNumber String?
+  mcNumber String?
+  email String?
+  phone String?
+  address String?
+  insuranceProvider String?
+  insuranceExpiresAt DateTime?
+  createdAt DateTime @default(now())
+  users User[]
+  subscription Subscription?
+  expenses Expense[]
+  appointments Appointment[]
+  customers Customer[]
+  drivers Driver[]
+  shipments Shipment[]
+  invoices Invoice[]
+}
+model User {
+  id String @id @default(cuid())
+  companyId String
+  company Company @relation(fields:[companyId], references:[id], onDelete:Cascade)
+  name String
+  email String
+  passwordHash String
+  role UserRole @default(DISPATCHER)
+  createdAt DateTime @default(now())
+  driverProfile Driver?
+  customerProfile Customer?
+  @@unique([companyId,email])
+  @@unique([email])
+  @@index([companyId])
+}
+model Customer {
+  id String @id @default(cuid())
+  companyId String
+  company Company @relation(fields:[companyId], references:[id], onDelete:Cascade)
+  name String
+  email String?
+  phone String?
+  billingAddress String?
+  notes String?
+  userId String? @unique
+  portalUser User? @relation(fields:[userId], references:[id], onDelete:SetNull)
+  shipments Shipment[]
+  invoices Invoice[]
+  appointments Appointment[]
+  createdAt DateTime @default(now())
+  @@index([companyId])
+}
+model Driver {
+  id String @id @default(cuid())
+  companyId String
+  company Company @relation(fields:[companyId], references:[id], onDelete:Cascade)
+  name String
+  phone String?
+  licenseNumber String?
+  active Boolean @default(true)
+  userId String? @unique
+  portalUser User? @relation(fields:[userId], references:[id], onDelete:SetNull)
+  shipments Shipment[]
+  expenses Expense[]
+  appointments Appointment[]
+  @@index([companyId])
+}
+model Shipment {
+  id String @id @default(cuid())
+  companyId String
+  company Company @relation(fields:[companyId], references:[id], onDelete:Cascade)
+  customerId String?
+  customer Customer? @relation(fields:[customerId], references:[id], onDelete:SetNull)
+  driverId String?
+  driver Driver? @relation(fields:[driverId], references:[id], onDelete:SetNull)
+  reference String
+  status ShipmentStatus @default(DRAFT)
+  freightType String @default("General Freight")
+  pickupName String?
+  pickupAddress String
+  pickupAt DateTime?
+  dropoffName String?
+  dropoffAddress String
+  dropoffAt DateTime?
+  vehicleYear Int?
+  vehicleMake String?
+  vehicleModel String?
+  vin String?
+  description String?
+  weightLbs Float?
+  rateCents Int @default(0)
+  miles Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  invoices Invoice[]
+  damageReports DamageReport[]
+  trackingEvents TrackingEvent[]
+  expenses Expense[]
+  appointments Appointment[]
+  @@unique([companyId,reference])
+  @@index([companyId,status])
+}
+model Invoice {
+  id String @id @default(cuid())
+  companyId String
+  company Company @relation(fields:[companyId], references:[id], onDelete:Cascade)
+  shipmentId String?
+  shipment Shipment? @relation(fields:[shipmentId], references:[id], onDelete:SetNull)
+  customerId String?
+  customer Customer? @relation(fields:[customerId], references:[id], onDelete:SetNull)
+  number String
+  customerName String
+  amountCents Int
+  status String @default("DRAFT")
+  dueAt DateTime?
+  createdAt DateTime @default(now())
+  @@unique([companyId,number])
+  @@index([companyId])
+}
+model DamageReport {
+  id String @id @default(cuid())
+  shipmentId String
+  shipment Shipment @relation(fields:[shipmentId], references:[id], onDelete:Cascade)
+  category DamageSeverity @default(COSMETIC)
+  description String
+  photoUrls String[]
+  createdAt DateTime @default(now())
+}
+model TrackingEvent {
+  id String @id @default(cuid())
+  shipmentId String
+  shipment Shipment @relation(fields:[shipmentId], references:[id], onDelete:Cascade)
+  latitude Float?
+  longitude Float?
+  note String?
+  recordedAt DateTime @default(now())
+  @@index([shipmentId,recordedAt])
+}
+
+model Subscription {
+  id String @id @default(cuid())
+  companyId String @unique
+  company Company @relation(fields:[companyId],references:[id],onDelete:Cascade)
+  stripeCustomerId String? @unique
+  stripeSubscriptionId String? @unique
+  stripePriceId String?
+  status SubscriptionStatus @default(INCOMPLETE)
+  currentPeriodEnd DateTime?
+  cancelAtPeriodEnd Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RateLimitBucket {
+  key String @id
+  count Int @default(0)
+  resetAt DateTime
+  updatedAt DateTime @updatedAt
+}
+model Integration {
+  id String @id @default(cuid())
+  companyId String
+  provider String
+  status String @default("DISCONNECTED")
+  externalAccountId String?
+  // Store encrypted credential references, not plaintext tokens.
+  secretRef String?
+  lastSyncAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([companyId,provider])
+  @@index([companyId])
+}
+
+
+enum ExpenseCategory { FUEL TOLLS MAINTENANCE REPAIRS LODGING MEALS INSURANCE PERMITS OTHER }
+enum AppointmentType { PICKUP DELIVERY SERVICE INSPECTION OTHER }
+model Expense {
+  id String @id @default(cuid())
+  companyId String
+  company Company @relation(fields:[companyId], references:[id], onDelete:Cascade)
+  shipmentId String?
+  shipment Shipment? @relation(fields:[shipmentId], references:[id], onDelete:SetNull)
+  driverId String?
+  driver Driver? @relation(fields:[driverId], references:[id], onDelete:SetNull)
+  category ExpenseCategory @default(OTHER)
+  description String
+  amountCents Int
+  expenseDate DateTime @default(now())
+  odometerMiles Float?
+  vendor String?
+  receiptUrl String?
+  createdAt DateTime @default(now())
+  @@index([companyId,expenseDate])
+}
+model Appointment {
+  id String @id @default(cuid())
+  companyId String
+  company Company @relation(fields:[companyId], references:[id], onDelete:Cascade)
+  shipmentId String?
+  shipment Shipment? @relation(fields:[shipmentId], references:[id], onDelete:SetNull)
+  customerId String?
+  customer Customer? @relation(fields:[customerId], references:[id], onDelete:SetNull)
+  driverId String?
+  driver Driver? @relation(fields:[driverId], references:[id], onDelete:SetNull)
+  type AppointmentType @default(OTHER)
+  title String
+  location String?
+  startsAt DateTime
+  endsAt DateTime?
+  notes String?
+  status String @default("SCHEDULED")
+  createdAt DateTime @default(now())
+  @@index([companyId,startsAt])
+}
