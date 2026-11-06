@@ -5,10 +5,37 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
-enum ShipmentStatus { DRAFT BOOKED ASSIGNED PICKED_UP IN_TRANSIT DELIVERED CANCELLED }
-enum UserRole { OWNER ADMIN DISPATCHER DRIVER ACCOUNTING CUSTOMER }
-enum DamageSeverity { COSMETIC MINOR MODERATE SEVERE }
-enum SubscriptionStatus { INCOMPLETE TRIALING ACTIVE PAST_DUE CANCELED UNPAID }
+enum ShipmentStatus {
+  DRAFT
+  BOOKED
+  ASSIGNED
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+enum UserRole {
+  OWNER
+  ADMIN
+  DISPATCHER
+  DRIVER
+  ACCOUNTING
+  CUSTOMER
+}
+enum DamageSeverity {
+  COSMETIC
+  MINOR
+  MODERATE
+  SEVERE
+}
+enum SubscriptionStatus {
+  INCOMPLETE
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+}
 model Company {
   id String @id @default(cuid())
   name String
@@ -184,8 +211,24 @@ model Integration {
 }
 
 
-enum ExpenseCategory { FUEL TOLLS MAINTENANCE REPAIRS LODGING MEALS INSURANCE PERMITS OTHER }
-enum AppointmentType { PICKUP DELIVERY SERVICE INSPECTION OTHER }
+enum ExpenseCategory {
+  FUEL
+  TOLLS
+  MAINTENANCE
+  REPAIRS
+  LODGING
+  MEALS
+  INSURANCE
+  PERMITS
+  OTHER
+}
+enum AppointmentType {
+  PICKUP
+  DELIVERY
+  SERVICE
+  INSPECTION
+  OTHER
+}
 model Expense {
   id String @id @default(cuid())
   companyId String
