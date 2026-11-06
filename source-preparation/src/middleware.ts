@@ -1,0 +1,16 @@
+import { NextRequest,NextResponse } from "next/server";
+export function middleware(req:NextRequest){
+ const res=NextResponse.next();
+ res.headers.set("X-Content-Type-Options","nosniff");
+ res.headers.set("X-Frame-Options","DENY");
+ res.headers.set("Referrer-Policy","strict-origin-when-cross-origin");
+ res.headers.set("Permissions-Policy","camera=(self), geolocation=(self), microphone=()");
+ res.headers.set("Cross-Origin-Opener-Policy","same-origin");
+ res.headers.set("X-DNS-Prefetch-Control","off");
+ if(process.env.NODE_ENV==="production"){
+   res.headers.set("Strict-Transport-Security","max-age=63072000; includeSubDomains; preload");
+   res.headers.set("Content-Security-Policy","default-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; object-src 'none'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https: wss:;");
+ }
+ return res;
+}
+export const config={matcher:["/((?!_next/static|_next/image|favicon.ico).*)"]};
