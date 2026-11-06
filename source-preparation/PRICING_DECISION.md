@@ -24,7 +24,7 @@
 ## Database and launch precautions
 - The new CompanyPlan enum and Company.plan field require a reviewed Prisma migration before deploying this branch against a database. **Do not apply a schema change to the existing Supabase database without backup and review.**
 - Existing company records will default to CARRIER; changing a company's plan requires an audited, authorized server-side flow; not complete.
-- Stripe sandbox prices for broker and carrier and their Vercel preview environment variables remain to be configured and verified.
+- All four broker/carrier monthly sandbox prices have been created, and Vercel preview price environment variables configured; end-to-end checkout verification remains pending.
 - Test checkout, webhook events, cancellations, failed payments, role isolation, and billing entitlement must pass before live charging.
 - These code changes have not enabled live customer billing.
 
@@ -38,6 +38,12 @@
 - Visionary Transport LLC sandbox carrier base Stripe price: `price_1UYw2IFHWLhESZ86f2BNFCuq` — USD 49.95/month, 1 seat included, `tax_behavior=exclusive`.
 - Sandbox additional-carrier-seat Stripe price: `price_1UYw2SFHWLhESZ86O2f1XMD1` — USD 24.95/month, `tax_behavior=exclusive`.
 - Both carrier price IDs have been written to the `many-freight` Vercel **preview** environment only. This doesn't turn on live billing; existing deployments require redeployment to pick up changed env vars.
-- The sandbox still has zero configured Stripe Tax registrations and no product tax code default. No assumption is made about where Visionary is registered to collect sales tax. Tax-exclusive pricing does not itself enable automatic calculation or collection.
-- Broker Stripe products and prices ($139.95 monthly with two seats, $75.95 per additional seat) remain uncreated pending confirmation of the appropriate tax classification. Candidate found in Stripe's catalog: `txcd_10103001` (SaaS, business use, hosted online); **not assigned or assumed approved**.
+- The sandbox still has zero configured Stripe Tax registrations and no global default tax code. No assumption is made about where Visionary is registered to collect sales tax. Tax-exclusive pricing does not itself enable automatic calculation or collection.
+- The user confirmed online cloud-hosted business-use SaaS. Stripe catalog tax code `txcd_10103001` has now been assigned to two carrier products and two broker products in sandbox. Broker prices created: `price_1UYw57FHWLhESZ86f84seZYC` ($139.95 monthly with two included seats) and `price_1UYw59FHWLhESZ861FKkrQVK` ($75.95 per extra broker seat), both tax-exclusive. Both IDs have been configured in Vercel preview.
 - Preview checkout remains test-only and incomplete pending correct tax configuration, database migration and end-to-end testing.
+
+## Tax calculation configuration
+- Stripe sandbox checkout now requests `automatic_tax: {enabled:true}`, required billing address collection, and allows Stripe to update customer address. It validates that both chosen prices are tax-exclusive.
+- This does not register Visionary Transport LLC for sales tax or make Stripe Tax collect in states without an existing tax registration. Stripe Tax sandbox currently has zero registrations; identify verified registrations with the owner before changing this.
+- Product tax classification is a configured Stripe category, not a legal determination of taxability. Tax obligations and registration state must be confirmed before live checkout.
+- A review of the Supabase CompanyPlan migration and production access controls remains required. Sandbox prices being configured do not establish functioning subscriptions.
