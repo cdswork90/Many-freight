@@ -36,7 +36,7 @@ export async function POST() {
 
   const portal = await stripe.billingPortal.sessions.create({
     customer: subscription.stripeCustomerId,
-    return_url: `${baseUrl.replace(/\\/$/, "")}/account`,
+    return_url: `${baseUrl.replace(/\/$/, "")}/account`,
   });
   return NextResponse.json({ url: portal.url }, { headers: { "Cache-Control": "no-store" } });
 }
