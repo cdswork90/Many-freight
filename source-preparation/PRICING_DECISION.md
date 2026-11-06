@@ -32,3 +32,12 @@
 - Many Freight is a software product operated by Visionary Transport LLC.
 - Revenue and expenses can be tracked separately in accounting, but Visionary Transport LLC remains the legal payment-receiving entity.
 - This plan does not change intellectual-property ownership.
+
+## Stripe sandbox price creation and tax-exclusive policy (2026-11-06)
+- User approved **applicable sales tax added on top of the listed subscription prices**. Prices are tax-exclusive, not tax-inclusive.
+- Visionary Transport LLC sandbox carrier base Stripe price: `price_1UYw2IFHWLhESZ86f2BNFCuq` — USD 49.95/month, 1 seat included, `tax_behavior=exclusive`.
+- Sandbox additional-carrier-seat Stripe price: `price_1UYw2SFHWLhESZ86O2f1XMD1` — USD 24.95/month, `tax_behavior=exclusive`.
+- Both carrier price IDs have been written to the `many-freight` Vercel **preview** environment only. This doesn't turn on live billing; existing deployments require redeployment to pick up changed env vars.
+- The sandbox still has zero configured Stripe Tax registrations and no product tax code default. No assumption is made about where Visionary is registered to collect sales tax. Tax-exclusive pricing does not itself enable automatic calculation or collection.
+- Broker Stripe products and prices ($139.95 monthly with two seats, $75.95 per additional seat) remain uncreated pending confirmation of the appropriate tax classification. Candidate found in Stripe's catalog: `txcd_10103001` (SaaS, business use, hosted online); **not assigned or assumed approved**.
+- Preview checkout remains test-only and incomplete pending correct tax configuration, database migration and end-to-end testing.
