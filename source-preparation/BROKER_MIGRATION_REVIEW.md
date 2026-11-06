@@ -26,3 +26,10 @@ This is a **proposal, not approval to execute**. Compare with actual schema and 
 - Confirm whether advertised subscription prices are **exclusive of** any applicable sales tax or **inclusive**; currently project copy says prices exclude tax.
 - Before production, check webhook idempotency, secure broker/carrier entitlements, seat count reconciliation on seat changes, proration and multi-company access tests.
 - No Stripe live charges or Supabase schema writes performed as part of this review.
+
+## Verified implementation — 2026-11-06
+- Before changing the database, checked row counts: **0 companies, 0 users, 0 subscriptions**; therefore no existing customer rows needed plan conversion.
+- Applied Supabase migration `20261106230852_many_freight_company_plan` in project `kekilfhknfuozemlwryv`. The operation returned `success: true`.
+- Verified `public."Company"."plan"` exists, is `NOT NULL`, has PostgreSQL enum type `"CompanyPlan"`, and defaults to `CARRIER`. Migration appears in the Supabase migration history.
+- Earlier references to the missing enum/column in this document are now obsolete. No live billing was activated.
+- Remaining blockers: Vercel `DATABASE_URL`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `APP_URL` not configured in the preview environment according to env name inventory, and seat-change subscription reconciliation/entitlements not verified. The pre-existing Supabase/Postgres integration variable values are not accessible in the current connector response; do not invent or expose credentials.
