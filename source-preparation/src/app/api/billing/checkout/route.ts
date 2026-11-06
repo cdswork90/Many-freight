@@ -3,9 +3,25 @@ import Stripe from "stripe";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-// The $49.95 base plan includes one internal user login, normally the owner.
-// Customer portal accounts and driver contact records without logins do not count.
+// The company plan is persisted server-side during registration. Never choose
+// a cheaper price based solely on a checkout request parameter.
 const paidSeatRoles = ["OWNER", "ADMIN", "DISPATCHER", "DRIVER", "ACCOUNTING"] as const;
+const plans = {
+  CARRIER: {
+    baseEnv: "STRIPE_PRICE_ID",
+    additionalEnv: "STRIPE_ADDITIONAL_DRIVER_PRICE_ID",
+    includedSeats: 1,
+    baseCents: 4995,
+    additionalCents: 2495,
+  },
+  BROKER: {
+    baseEnv: "STRIPE_BROKER_PRICE_ID",
+    additionalEnv: "STRIPE_BROKER_ADDITIONAL_SEAT_PRICE_ID",
+    includedSeats: 2,
+    baseCents: 13995,
+    additionalCents: 7595,
+  },
+} as const;
 
 export async function POST() {
   const session = await getSession();
@@ -13,40 +29,51 @@ export async function POST() {
   if (!["OWNER", "ADMIN"].includes(session.role))
     return NextResponse.json({ error: "Only company owners or admins can manage billing." }, { status: 403 });
 
-  // This review branch must not create live Stripe checkout sessions.
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key?.startsWith("sk_test_"))
     return NextResponse.json({ error: "Only Stripe test-mode checkout is enabled." }, { status: 503 });
-  if (!process.env.STRIPE_PRICE_ID || !process.env.STRIPE_ADDITIONAL_DRIVER_PRICE_ID)
-    return NextResponse.json({ error: "Base and additional-seat test prices must both be configured." }, { status: 503 });
   if (!process.env.APP_URL)
     return NextResponse.json({ error: "APP_URL is required for checkout redirects." }, { status: 503 });
 
-  const stripe = new Stripe(key);
   const company = await prisma.company.findUnique({ where: { id: session.companyId } });
   const sub = await prisma.subscription.findUnique({ where: { companyId: session.companyId } });
   if (!company || !sub) return NextResponse.json({ error: "Company billing profile missing." }, { status: 404 });
   if (sub.stripeSubscriptionId)
-    return NextResponse.json({ error: "A subscription already exists; manage seat changes in the billing portal once implemented." }, { status: 409 });
+    return NextResponse.json({ error: "A subscription already exists. Seat changes require subscription reconciliation." }, { status: 409 });
 
-  const basePrice = await stripe.prices.retrieve(process.env.STRIPE_PRICE_ID);
-  const seatPrice = await stripe.prices.retrieve(process.env.STRIPE_ADDITIONAL_DRIVER_PRICE_ID);
-  const monthly = (p: Stripe.Price) => p.active && !p.livemode && p.currency === "usd" &&
-    p.type === "recurring" && p.recurring?.interval === "month" && p.recurring.interval_count === 1;
-  if (!monthly(basePrice) || !monthly(seatPrice) || basePrice.unit_amount !== 4995 || seatPrice.unit_amount !== 2495 ||
-      basePrice.id === seatPrice.id)
-    return NextResponse.json({ error: "Stripe test prices are not configured for $49.95 base (one included seat) + $24.95 extra seats." }, { status: 503 });
+  const plan = plans[company.plan];
+  const basePriceId = process.env[plan.baseEnv];
+  const additionalPriceId = process.env[plan.additionalEnv];
+  if (!basePriceId || !additionalPriceId)
+    return NextResponse.json({ error: `${company.plan} test prices are not configured.` }, { status: 503 });
+
+  const stripe = new Stripe(key);
+  const [basePrice, additionalPrice] = await Promise.all([
+    stripe.prices.retrieve(basePriceId),
+    stripe.prices.retrieve(additionalPriceId),
+  ]);
+  const monthlyTestPrice = (p: Stripe.Price) =>
+    p.active && !p.livemode && p.currency === "usd" && p.type === "recurring" &&
+    p.recurring?.interval === "month" && p.recurring.interval_count === 1 &&
+    p.recurring.usage_type === "licensed";
+  if (!monthlyTestPrice(basePrice) || !monthlyTestPrice(additionalPrice) ||
+      basePrice.unit_amount !== plan.baseCents || additionalPrice.unit_amount !== plan.additionalCents ||
+      basePrice.id === additionalPrice.id) {
+    return NextResponse.json({
+      error: `Stripe ${company.plan} prices must match approved monthly plan amounts.`
+    }, { status: 503 });
+  }
 
   const billableSeats = await prisma.user.count({
     where: { companyId: session.companyId, role: { in: [...paidSeatRoles] } },
   });
-  const additionalSeats = Math.max(0, billableSeats - 1);
+  const additionalSeats = Math.max(0, billableSeats - plan.includedSeats);
 
   let customerId = sub.stripeCustomerId;
   if (!customerId) {
     const customer = await stripe.customers.create({
       name: company.name, email: session.email,
-      metadata: { companyId: company.id, product: "many-freight" },
+      metadata: { companyId: company.id, product: "many-freight", plan: company.plan },
     });
     customerId = customer.id;
     await prisma.subscription.update({ where: { companyId: company.id }, data: { stripeCustomerId: customerId } });
@@ -55,7 +82,7 @@ export async function POST() {
   const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
     { price: basePrice.id, quantity: 1 },
   ];
-  if (additionalSeats > 0) lineItems.push({ price: seatPrice.id, quantity: additionalSeats });
+  if (additionalSeats > 0) lineItems.push({ price: additionalPrice.id, quantity: additionalSeats });
 
   const checkout = await stripe.checkout.sessions.create({
     mode: "subscription",
@@ -64,10 +91,18 @@ export async function POST() {
     success_url: `${process.env.APP_URL}/account?checkout=success`,
     cancel_url: `${process.env.APP_URL}/account?checkout=cancelled`,
     client_reference_id: company.id,
-    metadata: { companyId: company.id, additionalSeats: String(additionalSeats) },
-    subscription_data: { metadata: { companyId: company.id, additionalSeats: String(additionalSeats) } },
+    metadata: { companyId: company.id, plan: company.plan, additionalSeats: String(additionalSeats) },
+    subscription_data: { metadata: { companyId: company.id, plan: company.plan, additionalSeats: String(additionalSeats) } },
   });
-  return NextResponse.json({ url: checkout.url, additionalSeats, includedSeats: 1, basePriceMonthlyCents: 4995, seatPriceMonthlyCents: 2495 }, {
-    headers: { "Cache-Control": "no-store" },
-  });
+
+  return NextResponse.json({
+    url: checkout.url,
+    plan: company.plan,
+    billableSeats,
+    includedSeats: plan.includedSeats,
+    additionalSeats,
+    basePriceMonthlyCents: plan.baseCents,
+    seatPriceMonthlyCents: plan.additionalCents,
+    monthlySubtotalCents: plan.baseCents + additionalSeats * plan.additionalCents,
+  }, { headers: { "Cache-Control": "no-store" } });
 }
