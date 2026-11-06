@@ -32,8 +32,13 @@ export async function POST() {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key?.startsWith("sk_test_"))
     return NextResponse.json({ error: "Only Stripe test-mode checkout is enabled." }, { status: 503 });
-  if (!process.env.APP_URL)
-    return NextResponse.json({ error: "APP_URL is required for checkout redirects." }, { status: 503 });
+  // Preview deployments get a trusted host from Vercel. Production still
+  // requires an explicitly configured APP_URL and remains blocked in test mode.
+  const redirectOrigin = process.env.APP_URL ||
+    (process.env.VERCEL_ENV === "preview" && process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}` : undefined);
+  if (!redirectOrigin || !redirectOrigin.startsWith("https://"))
+    return NextResponse.json({ error: "Secure checkout redirect URL is missing." }, { status: 503 });
 
   const company = await prisma.company.findUnique({ where: { id: session.companyId } });
   const sub = await prisma.subscription.findUnique({ where: { companyId: session.companyId } });
@@ -92,8 +97,8 @@ export async function POST() {
     billing_address_collection: "required",
     customer_update: { address: "auto" },
     line_items: lineItems,
-    success_url: `${process.env.APP_URL}/account?checkout=success`,
-    cancel_url: `${process.env.APP_URL}/account?checkout=cancelled`,
+    success_url: `${redirectOrigin.replace(/\/$/, "")}/account?checkout=success`,
+    cancel_url: `${redirectOrigin.replace(/\/$/, "")}/account?checkout=cancelled`,
     client_reference_id: company.id,
     metadata: { companyId: company.id, plan: company.plan, additionalSeats: String(additionalSeats) },
     subscription_data: { metadata: { companyId: company.id, plan: company.plan, additionalSeats: String(additionalSeats) } },
