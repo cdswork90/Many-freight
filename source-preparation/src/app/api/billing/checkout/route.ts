@@ -33,9 +33,9 @@ export async function POST() {
   const seatPrice = await stripe.prices.retrieve(process.env.STRIPE_ADDITIONAL_DRIVER_PRICE_ID);
   const monthly = (p: Stripe.Price) => p.active && !p.livemode && p.currency === "usd" &&
     p.type === "recurring" && p.recurring?.interval === "month" && p.recurring.interval_count === 1;
-  if (!monthly(basePrice) || !monthly(seatPrice) || seatPrice.unit_amount !== 2495 ||
+  if (!monthly(basePrice) || !monthly(seatPrice) || seatPrice.unit_amount !== 4995 ||
       basePrice.id === seatPrice.id)
-    return NextResponse.json({ error: "Stripe test prices are not configured for monthly base + $24.95 seats." }, { status: 503 });
+    return NextResponse.json({ error: "Stripe test prices are not configured for monthly base + $49.95 seats." }, { status: 503 });
 
   const additionalSeats = await prisma.user.count({
     where: { companyId: session.companyId, role: { in: [...paidSeatRoles] } },
@@ -66,7 +66,7 @@ export async function POST() {
     metadata: { companyId: company.id, additionalSeats: String(additionalSeats) },
     subscription_data: { metadata: { companyId: company.id, additionalSeats: String(additionalSeats) } },
   });
-  return NextResponse.json({ url: checkout.url, additionalSeats, seatPriceMonthlyCents: 2495 }, {
+  return NextResponse.json({ url: checkout.url, additionalSeats, seatPriceMonthlyCents: 4995 }, {
     headers: { "Cache-Control": "no-store" },
   });
 }
