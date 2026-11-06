@@ -1,7 +1,7 @@
 name: Validate Many Freight source
 on:
   push:
-    branches: [many-freight-source-review]
+    branches: [many-freight-source-review, many-freight-secure-billing-recovery]
     paths:
       - source-preparation/**
       - .github/workflows/validate-source.yml
