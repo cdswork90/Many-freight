@@ -28,6 +28,10 @@ enum DamageSeverity {
   MODERATE
   SEVERE
 }
+enum CompanyPlan {
+  CARRIER
+  BROKER
+}
 enum SubscriptionStatus {
   INCOMPLETE
   TRIALING
@@ -39,6 +43,7 @@ enum SubscriptionStatus {
 model Company {
   id String @id @default(cuid())
   name String
+  plan CompanyPlan @default(CARRIER)
   dotNumber String?
   mcNumber String?
   email String?
