@@ -58,7 +58,8 @@ export async function POST() {
     p.recurring.usage_type === "licensed";
   if (!monthlyTestPrice(basePrice) || !monthlyTestPrice(additionalPrice) ||
       basePrice.unit_amount !== plan.baseCents || additionalPrice.unit_amount !== plan.additionalCents ||
-      basePrice.id === additionalPrice.id) {
+      basePrice.id === additionalPrice.id ||
+      basePrice.tax_behavior !== "exclusive" || additionalPrice.tax_behavior !== "exclusive") {
     return NextResponse.json({
       error: `Stripe ${company.plan} prices must match approved monthly plan amounts.`
     }, { status: 503 });
@@ -87,6 +88,9 @@ export async function POST() {
   const checkout = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer: customerId,
+    automatic_tax: { enabled: true },
+    billing_address_collection: "required",
+    customer_update: { address: "auto" },
     line_items: lineItems,
     success_url: `${process.env.APP_URL}/account?checkout=success`,
     cancel_url: `${process.env.APP_URL}/account?checkout=cancelled`,
