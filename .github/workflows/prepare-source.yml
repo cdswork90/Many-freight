@@ -1,8 +1,5 @@
 name: Prepare Many Freight application source
 on:
-  push:
-    paths:
-      - .github/workflows/prepare-source.yml
   workflow_dispatch:
 permissions:
   contents: write
@@ -58,8 +55,8 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -B many-freight-source-review
+          git checkout -b many-freight-source-review # Abort if the branch already exists locally
           git add source-preparation
           git diff --cached --quiet && exit 0
           git commit -m "Extract Many Freight source to review directory"
-          git push --force origin many-freight-source-review
+          git push origin many-freight-source-review # Non-fast-forward pushes are rejected
