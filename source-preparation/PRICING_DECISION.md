@@ -1,29 +1,20 @@
-# Many Freight — subscription pricing decision (2026-11-06)
+# Many Freight — approved subscription pricing (2026-11-06)
 
-## Confirmed by owner
-- **Additional driver / paid user seat:** USD **$49.95 per additional seat per month**, billed as a recurring subscription add-on.
-- This is **not** the base company subscription price.
-- One add-on seat corresponds to one additional billable user login; do not charge for an unactivated driver/contact record.
-- Base company subscription remains a separate recurring line item and is not changed by this decision.
-- The existing base plan amount must be verified before publishing customer checkout pricing.
-- Add-on seat count should be derived from active billable seats, with server-side enforcement and Stripe quantity reconciliation.
-- Use Stripe Billing subscriptions, not Stripe Connect; Stripe Tax only where configured and applicable.
-- Require explicit price-and-quantity review before checkout; show base, seats, monthly subtotal and taxes clearly.
-- Any seat quantity adjustments must respect the published proration policy, confirmed before activation.
-- Use Stripe **test mode** for implementation and lifecycle testing; do not enable live customer billing yet.
+## Final pricing decision
+- **$49.95 per month** for a company subscription, **including the first two internal user seats** (including the owner).
+- **$24.95 per month for each internal user seat beyond those two**, starting with the third seat.
+- Example monthly subtotals before any applicable taxes: 1–2 seats $49.95; 3 seats $74.90; 4 seats $99.85; 5 seats $124.80.
+- Count billable logins with roles OWNER, ADMIN, DISPATCHER, DRIVER or ACCOUNTING, not customer portal logins, unactivated contacts, or driver records without login accounts.
+- Base plan and additional seats are separate recurring Stripe Billing line items; no Stripe Connect.
+- Validate monthly USD recurring Stripe test prices of 4995 cents and 2495 cents before test checkout.
+- Show full total and any applicable tax before payment. Seat additions/removals after signup require a separate audited subscription quantity update and a defined proration policy; this remains pending.
+- Do not enable live customer billing before integration, security and lifecycle tests pass.
 
-## Implementation checkpoint
-- Code currently has one base subscription Stripe price but lacks completed quantity-based seat billing.
-- Existing Vercel preview environment contains STRIPE_ADDITIONAL_DRIVER_PRICE_ID, but its amount and Stripe account are **not verified**.
-- Next: confirm the desired Stripe test account, verify/create recurring add-on Price (4995 cents/month), implement seat entitlement and checkout/subscription quantity handling, then test subscription lifecycle.
+## Entity
+- Many Freight is the software brand operated by Visionary Transport LLC, the legal payment-receiving entity.
+- Maintain separate Many Freight revenue and expense reporting, but that does not create a separate legal entity or separate IP ownership.
 
-## Operating entity decision (2026-11-06)
-- **Visionary Transport LLC** remains the legal operating and payment-receiving entity for Many Freight. Do not require formation of a separate Many Freight LLC for this launch.
-- **Many Freight** remains the customer-facing software brand/product. Use an accurately configured Stripe account under Visionary Transport LLC, not a fictitious independent legal entity.
-- Track Many Freight subscription revenue and expenses separately in accounting, while recognizing they remain Visionary Transport LLC's income and obligations unless ownership/legal arrangements later change.
-- Retain test-mode billing until security, database, webhook and subscription lifecycle checks pass. Do not move to live charging solely because of this entity choice.
-- This documentation does not transfer personal ownership of IP or establish the right to retain Many Freight if Visionary Transport LLC is sold or ownership changes; address those rights in a separate written agreement.
-
-## Updated seat price (2026-11-06)
-- Latest owner instruction sets the additional seat price to **$49.95 per month**, superseding the previous $24.95 figure.
-- The company base subscription remains separate, and no live price or customer subscription has been changed.
+## Status
+- Review-branch checkout has been configured to calculate add-on quantity as max(0, billable logins - 2).
+- The sandbox's previously observed $60 base and $19.95 add-on Stripe prices do **not** satisfy the approved pricing.
+- The correct Stripe test prices and environment configuration, subscription seat reconciliation, and end-to-end tests remain to be completed; no live charges are authorized.
