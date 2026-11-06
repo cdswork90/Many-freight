@@ -37,6 +37,9 @@ jobs:
           if not (source / "package.json").is_file() or not (source / "prisma/schema.prisma").is_file():
               raise SystemExit("Expected Next.js and Prisma source not found")
           for path in source.rglob("*"):
+              if path.is_file() and path.name == ".env.example":
+                  path.unlink()
+                  continue
               if path.is_file() and path.stat().st_size < 2000000:
                   data = path.read_text(errors="ignore")
                   if re.search(r"(sk_live_|sk_test_|sb_secret_|SUPABASE_SERVICE_ROLE_KEY\s*=\s*[^\s#]+|OPENAI_API_KEY\s*=\s*sk-)", data):
