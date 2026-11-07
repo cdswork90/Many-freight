@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { signSession,sessionCookie } from "@/lib/auth";
 import { rateLimit,rateLimitResponse } from "@/lib/security";
-const schema=z.object({companyName:z.string().min(2).max(120),plan:z.enum(["CARRIER","BROKER"]).default("CARRIER"),name:z.string().min(2).max(100),email:z.string().email().max(254),password:z.string().min(12).max(128)});
+const schema=z.object({companyName:z.string().min(2).max(120),plan:z.literal("CARRIER").default("CARRIER"),name:z.string().min(2).max(100),email:z.string().email().max(254),password:z.string().min(12).max(128)});
 export async function POST(req:NextRequest){
  const throttle=await rateLimit(req,"auth-register",5,900);if(!throttle.allowed)return rateLimitResponse(throttle.retryAfter||900);
  const parsed=schema.safeParse(await req.json());if(!parsed.success)return NextResponse.json({error:"Invalid registration fields. Password must be at least 12 characters."},{status:400});
