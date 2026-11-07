@@ -1,3 +1,4 @@
+import {appointmentScope} from "@/lib/tenant-scope";
 import {paidFeatureResponse} from "@/lib/billing";
 import {NextRequest,NextResponse} from "next/server";import {z} from "zod";import {prisma} from "@/lib/prisma";import {getSession} from "@/lib/auth";
 const schema=z.object({title:z.string().min(2).max(160),type:z.enum(["PICKUP","DELIVERY","SERVICE","INSPECTION","OTHER"]).default("OTHER"),startsAt:z.string().datetime(),endsAt:z.string().datetime().optional(),location:z.string().max(500).optional(),notes:z.string().max(2000).optional(),shipmentId:z.string().optional(),customerId:z.string().optional(),driverId:z.string().optional()});
@@ -5,9 +6,7 @@ export async function GET() {
   const s = await getSession();
   if (!s) return NextResponse.json({error:"Authentication required."},{status:401});
  const subscriptionGate=await paidFeatureResponse(s);if(subscriptionGate)return subscriptionGate;
-  const where: any = { companyId: s.companyId };
-  if (s.role === "DRIVER") where.driver = { userId: s.userId };
-  if (s.role === "CUSTOMER") where.customer = { userId: s.userId };
+  const where = appointmentScope(s);
 
   // Appointment viewers do not need linked Driver, Customer, or Shipment records.
   // Returning those complete relations would disclose unrelated personal and
