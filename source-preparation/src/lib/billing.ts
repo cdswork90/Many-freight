@@ -2,7 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { SessionUser } from "@/lib/auth";
 
 export type PaidFeature = "LOAD_BOARD" | "GPS_LIVE" | "REPORTS_EXPORT" | "ADVANCED_DISPATCH";
-const entitledStatuses = ["ACTIVE", "TRIALING"];
+// Unpaid Stripe trials must not unlock real operational data.
+const entitledStatuses = ["ACTIVE"];
 
 export async function checkPaidAccess(session: SessionUser) {
   const subscription = await prisma.subscription.findUnique({
