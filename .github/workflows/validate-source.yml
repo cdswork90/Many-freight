@@ -5,6 +5,10 @@ on:
     paths:
       - source-preparation/**
       - .github/workflows/validate-source.yml
+  pull_request:
+    paths:
+      - source-preparation/**
+      - .github/workflows/validate-source.yml
   workflow_dispatch:
 permissions:
   contents: read
