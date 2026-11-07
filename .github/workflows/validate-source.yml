@@ -36,7 +36,7 @@ jobs:
         run: npx prisma generate
       - name: Typecheck
         run: npm run typecheck
-      - name: Test paid subscription entitlements
-        run: npm run test:entitlements
+      - name: Test subscription and tenant privacy
+        run: npm run test:security
       - name: Build Next.js
         run: npm run build
