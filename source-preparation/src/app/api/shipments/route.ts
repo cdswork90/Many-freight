@@ -6,7 +6,7 @@ const CreateShipment=z.object({reference:z.string().min(1),pickupAddress:z.strin
 export async function GET(){
  const session=await getSession();if(!session)return NextResponse.json({error:"Authentication required."},{status:401});
  const where:any={companyId:session.companyId};if(session.role==="DRIVER")where.driver={userId:session.userId};if(session.role==="CUSTOMER")where.customer={userId:session.userId};
- const shipments=await prisma.shipment.findMany({where,include:{customer:true,driver:true},orderBy:{createdAt:"desc"}});
+ const shipments=await prisma.shipment.findMany({where,include:{customer:{select:{id:true,name:true,phone:true}},driver:{select:{id:true,name:true}}},orderBy:{createdAt:"desc"}});
  return NextResponse.json(shipments);
 }
 export async function POST(req:NextRequest){
