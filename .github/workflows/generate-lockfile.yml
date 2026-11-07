@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/generate-lockfile.yml
+      - source-preparation/package.json
   workflow_dispatch:
 permissions:
   contents: write
@@ -16,7 +17,7 @@ jobs:
           persist-credentials: true
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           registry-url: https://registry.npmjs.org
       - name: Generate npm lockfile
         working-directory: source-preparation
