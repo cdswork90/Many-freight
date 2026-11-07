@@ -177,6 +177,83 @@ async function run() {
   assert.equal(brokerOther.status, 200);
   assert.equal(brokerOther.data.length, 0);
   console.log("PASS: driver directory tenant isolation");
+
+  // Protect customer portal records within and between broker companies.
+  const customerOne=await request("/api/customers","POST",{
+    name:"Broker Customer One",email:"customer-one@example.test"
+  },broker.cookie);
+  const customerTwo=await request("/api/customers","POST",{
+    name:"Broker Customer Two",email:"customer-two@example.test"
+  },broker.cookie);
+  assert.equal(customerOne.status,201,JSON.stringify(customerOne.data));
+  assert.equal(customerTwo.status,201,JSON.stringify(customerTwo.data));
+  const crossCompanyInvite=await request(
+    "/api/customers/"+customerOne.data.id+"/portal","POST",
+    {name:"Intruding User",email:"intruder@example.test",password:"Test-Portal-Password-123"},
+    carrier.cookie
+  );
+  assert.equal(crossCompanyInvite.status,404);
+  const customerEmail="portal-one@local.test", customerPassword="Test-Portal-Password-123";
+  const invitation=await request(
+    "/api/customers/"+customerOne.data.id+"/portal","POST",
+    {name:"Portal Customer One",email:customerEmail,password:customerPassword},
+    broker.cookie
+  );
+  assert.equal(invitation.status,201,JSON.stringify(invitation.data));
+  const duplicateInvitation=await request(
+    "/api/customers/"+customerOne.data.id+"/portal","POST",
+    {name:"Another Customer",email:"portal-another@local.test",password:customerPassword},
+    broker.cookie
+  );
+  assert.equal(duplicateInvitation.status,409);
+  assert.equal(
+    await prisma.user.count({where:{email:"portal-another@local.test"}}),0,
+    "Failed customer portal invitation must never leave an orphan login"
+  );
+  const customerCookie=await login(customerEmail,customerPassword);
+  const ownCustomerRecords=await request("/api/customers","GET",undefined,customerCookie);
+  assert.equal(ownCustomerRecords.status,200);
+  assert.deepEqual(ownCustomerRecords.data.map((x:any)=>x.id),[customerOne.data.id]);
+  const crossCompanyCustomerUpdate=await request(
+    "/api/customers/"+customerOne.data.id,"PATCH",{name:"Bad Cross-Company Edit"},carrier.cookie
+  );
+  assert.equal(crossCompanyCustomerUpdate.status,404);
+  console.log("PASS: broker customer-portal signup, single-customer visibility and cross-tenant update isolation");
+
+  const assignCustomer=await request(
+    "/api/shipments/"+brokerCreated.data.id,"PATCH",{customerId:customerOne.data.id},broker.cookie
+  );
+  assert.equal(assignCustomer.status,200);
+  const customerShipments=await request("/api/shipments","GET",undefined,customerCookie);
+  assert.equal(customerShipments.status,200);
+  assert.deepEqual(customerShipments.data.map((x:any)=>x.reference),["TENANT-B-200"]);
+
+  const createInvoice=async(number:string,customerId:string)=>request(
+    "/api/invoices","POST",
+    {number,customerId,customerName:"Sample Brokerage Customer",amountCents:6000},
+    broker.cookie
+  );
+  const firstInvoice=await createInvoice("BROKER-INV-1",customerOne.data.id);
+  const otherInvoice=await createInvoice("BROKER-INV-2",customerTwo.data.id);
+  assert.equal(firstInvoice.status,201,JSON.stringify(firstInvoice.data));
+  assert.equal(otherInvoice.status,201,JSON.stringify(otherInvoice.data));
+  const customerInvoices=await request("/api/invoices","GET",undefined,customerCookie);
+  assert.equal(customerInvoices.status,200);
+  assert.deepEqual(customerInvoices.data.map((x:any)=>x.number),["BROKER-INV-1"]);
+
+  const makeAppointment=async(title:string,customerId:string)=>request(
+    "/api/appointments","POST",
+    {title,customerId,type:"PICKUP",startsAt:"2027-01-12T15:00:00.000Z"},
+    broker.cookie
+  );
+  const ownAppointment=await makeAppointment("Pickup for customer one",customerOne.data.id);
+  const otherAppointment=await makeAppointment("Pickup for customer two",customerTwo.data.id);
+  assert.equal(ownAppointment.status,201,JSON.stringify(ownAppointment.data));
+  assert.equal(otherAppointment.status,201,JSON.stringify(otherAppointment.data));
+  const appointments=await request("/api/appointments","GET",undefined,customerCookie);
+  assert.equal(appointments.status,200);
+  assert.deepEqual(appointments.data.map((x:any)=>x.title),["Pickup for customer one"]);
+  console.log("PASS: customer portal is isolated to own loads, invoices and appointments");
 }
 
 run().then(
