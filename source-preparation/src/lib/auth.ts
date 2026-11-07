@@ -15,7 +15,16 @@ export async function getSession():Promise<SessionUser|null>{
   const token=cookies().get(cookieName)?.value;
   if(!token)return null;
   try { const {payload}=await jwtVerify(token,secret); if(!payload.userId||!payload.companyId||!payload.role||!payload.email)return null;
-    return {userId:String(payload.userId),companyId:String(payload.companyId),role:String(payload.role),email:String(payload.email)};
+    // A valid signed cookie alone is not sufficient: roles and company membership
+    // can change before the seven-day token expires.
+    const userId = String(payload.userId);
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, companyId: true, role: true, email: true },
+    });
+    if (!user || user.companyId !== String(payload.companyId) ||
+        user.role !== String(payload.role) || user.email !== String(payload.email)) return null;
+    return {userId:user.id,companyId:user.companyId,role:user.role,email:user.email};
   } catch{return null;}
 }
 export function sessionCookie(token:string){return {name:cookieName,value:token,httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax" as const,path:"/",maxAge:60*60*24*7};}
