@@ -1,24 +1,30 @@
-# MANY FREIGHT — Driver and Owner-Operator First
-Updated 2026-11-04
+# MANY FREIGHT — Carrier, Owner-Operator and Broker SaaS
+Updated 2026-11-07
 
-## Product positioning
-MANY FREIGHT is a mobile-friendly transportation management application for independent drivers, owner-operators, hotshot operators and small carrier fleets. **No broker-specific role, broker dashboard or broker subscription plan in the customer-facing product.**
+## Official product positioning
+Many Freight is a responsive transportation-management SaaS for independent drivers, owner-operators, hotshot operators, small and midsize carriers, and **freight brokerage companies**. Both carriers and brokers must be able to register, subscribe, and purchase seats through their own company accounts. Broker enrollment is not to be removed as part of the driver-friendly product design.
+
+Many Freight itself provides software; operating as a software vendor is separate from obtaining motor-carrier or freight-broker operating authority. Each subscribing company's own authority, insurance and bond/trust responsibilities remain its responsibility, subject to applicable law and verification.
+
+## Customer account types
+- **CARRIER**: independent owner-operator, hotshot operator, carrier or fleet company. Driver, dispatcher, owner/admin and accounting users can operate according to their assigned roles.
+- **BROKER**: freight broker business with separate company subscription, user seats, customers, load posting/assignment and broker-appropriate workflows. Broker company ownership and permissions must be enforced at the API layer, not only by hiding menus.
+- **CUSTOMER** and **DRIVER**: portal/user roles linked to their subscribing carrier or broker company as applicable; these are not independent broker/carrier subscriptions.
 
 ## Core workflows
-1. Driver/owner-operator creates or receives a load, records customer and pickup/drop-off details.
-2. Manage appointments, vehicle/trailer details, mileage, fuel and expenses.
-3. Capture pickup/delivery photos, inspections, damage reports, BOL, proof of delivery and signatures.
-4. Generate invoices and track payment status.
-5. Call, text or email customers using the company's own device and manually log external communications; in-app communications can be logged automatically.
-6. Maintain carrier insurance and COI verification for marketplace participation.
-7. Optional carrier-facing load discovery and bidding, subject to applicable law, source permissions and required agreements.
-8. Small fleet accounts manage drivers, vehicles, loads and reporting.
+1. Both carrier and broker companies register, select their company plan, and retain their own tenant-isolated data.
+2. Create or receive loads, record customer details, pickup/delivery appointments, and assign eligible personnel or contracted carriers where implemented and authorized.
+3. Capture inspections, damage reports, bills of lading, proof of delivery, photos and signatures using private storage when those features are implemented and verified.
+4. Manage invoicing, expense entries, compliance records, insurance details and audit trails.
+5. Support driver/customer portals and owner/admin/dispatcher roles with role- and company-scoped access.
+6. Provide optional integrations for external load services, subject to partner API approval; core TMS workflows must remain standalone.
 
-## Pricing direction (proposals only, not implemented)
-- Invited driver under a company: free basic access.
-- Independent owner-operator: affordable low-cost subscription, price TBD.
-- Small fleet: tiered subscription, price TBD.
-- **Remove broker pricing and broker-specific billing tiers.**
+## Subscription prices currently represented in test checkout code
+- Carrier: $49.95 per month, includes 1 billable internal seat, plus $24.95 for each additional billable internal seat.
+- Broker: $139.95 per month, includes 2 billable internal seats, plus $75.95 for each additional billable internal seat.
+- Applicable sales tax is additional where verified and configured.
+- Billing remains **test-only**. Live payments must remain disabled until Stripe products, tax rules/registrations, webhooks, seat reconciliation, entitlements and security end-to-end testing are complete.
+- New company signup alone does not authorize real operational access. Demonstration loads must be clearly simulated and isolated from real work.
 
-## Boundaries
-Do not market the product as a licensed freight brokerage or claim completed external integrations, GPS, AI, payment processing or app-store availability before verification. Existing database marketplace and carrier records may remain for operational compatibility; removal of broker-specific UI and billing requires application source changes and testing.
+## Release boundaries
+Do not remove or block broker registration. Do not market Many Freight itself as an FMCSA-licensed brokerage or imply that a software subscription grants operating authority. Do not claim completed external integrations, GPS, AI, payment processing or app-store availability before verification. Do not unlock production operations for unpaid/unverified accounts. Require multi-tenant isolation, access-control tests and a reviewed production rollout before changing deployment protection.
