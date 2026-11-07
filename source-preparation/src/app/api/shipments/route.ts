@@ -1,4 +1,4 @@
-import {shipmentScope} from "@/lib/tenant-scope";
+import {shipmentScope,driverShipmentProjection} from "@/lib/tenant-scope";
 import {paidFeatureResponse} from "@/lib/billing";
 import { NextRequest,NextResponse } from "next/server";
 import { z } from "zod";
@@ -14,12 +14,7 @@ export async function GET(){
  if(session.role==="DRIVER"){
    const shipments=await prisma.shipment.findMany({
      where,
-     select:{
-       id:true,reference:true,companyId:true,customerId:true,driverId:true,
-       pickupAddress:true,dropoffAddress:true,pickupAt:true,dropoffAt:true,
-       freightType:true,status:true,description:true,miles:true,
-       customer:{select:{id:true,name:true}},driver:{select:{id:true,name:true}}
-     },
+     select:driverShipmentProjection,
      orderBy:{createdAt:"desc"}
    });
    return NextResponse.json(shipments,{headers:{"Cache-Control":"private, no-store"}});
