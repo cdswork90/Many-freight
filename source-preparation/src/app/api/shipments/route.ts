@@ -1,3 +1,4 @@
+import {shipmentScope} from "@/lib/tenant-scope";
 import {paidFeatureResponse} from "@/lib/billing";
 import { NextRequest,NextResponse } from "next/server";
 import { z } from "zod";
@@ -7,9 +8,24 @@ const CreateShipment=z.object({reference:z.string().min(1),pickupAddress:z.strin
 export async function GET(){
  const session=await getSession();if(!session)return NextResponse.json({error:"Authentication required."},{status:401});
  const subscriptionGate=await paidFeatureResponse(session);if(subscriptionGate)return subscriptionGate;
- const where:any={companyId:session.companyId};if(session.role==="DRIVER")where.driver={userId:session.userId};if(session.role==="CUSTOMER")where.customer={userId:session.userId};
+ const where=shipmentScope(session);
+ // A driver needs route, assignment and milestone details, not the customer
+ // contract rate, VIN or customer contact details from the full database row.
+ if(session.role==="DRIVER"){
+   const shipments=await prisma.shipment.findMany({
+     where,
+     select:{
+       id:true,reference:true,companyId:true,customerId:true,driverId:true,
+       pickupAddress:true,dropoffAddress:true,pickupAt:true,dropoffAt:true,
+       freightType:true,status:true,description:true,miles:true,
+       customer:{select:{id:true,name:true}},driver:{select:{id:true,name:true}}
+     },
+     orderBy:{createdAt:"desc"}
+   });
+   return NextResponse.json(shipments,{headers:{"Cache-Control":"private, no-store"}});
+ }
  const shipments=await prisma.shipment.findMany({where,include:{customer:{select:{id:true,name:true,phone:true}},driver:{select:{id:true,name:true}}},orderBy:{createdAt:"desc"}});
- return NextResponse.json(shipments);
+ return NextResponse.json(shipments,{headers:{"Cache-Control":"private, no-store"}});
 }
 export async function POST(req:NextRequest){
  const session=await getSession();if(!session)return NextResponse.json({error:"Authentication required."},{status:401});
