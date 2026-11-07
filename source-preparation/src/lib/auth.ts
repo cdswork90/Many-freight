@@ -1,9 +1,10 @@
 import { cookies } from "next/headers";
 import { jwtVerify, SignJWT } from "jose";
 import { prisma } from "@/lib/prisma";
+import { isSessionSigningConfigured } from "@/lib/launch-readiness";
 const cookieName = "ttpro_session";
 const authSecret = process.env.AUTH_SECRET || "development-only-secret-change-this-before-launch";
-function assertAuthSecret(){if(process.env.NODE_ENV==="production"&&(!process.env.AUTH_SECRET||process.env.AUTH_SECRET.length<32))throw new Error("AUTH_SECRET must be at least 32 characters in production.");}
+function assertAuthSecret(){if(!isSessionSigningConfigured(process.env.AUTH_SECRET,process.env.NODE_ENV==="production"))throw new Error("AUTH_SECRET must be at least 32 characters in production.");}
 const secret = new TextEncoder().encode(authSecret);
 export type SessionUser = { userId:string; companyId:string; role:string; email:string };
 export async function signSession(user:SessionUser) {
