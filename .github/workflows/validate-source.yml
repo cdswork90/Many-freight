@@ -24,13 +24,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Install dependencies
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci --no-audit --no-fund
-          else
-            npm install --no-audit --no-fund
-          fi
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
       - name: Validate schema
         run: npx prisma validate
       - name: Generate Prisma client
