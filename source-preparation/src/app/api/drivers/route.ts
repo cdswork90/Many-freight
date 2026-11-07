@@ -1,3 +1,4 @@
+import {driverDirectoryProjection} from "@/lib/tenant-scope";
 import {paidFeatureResponse} from "@/lib/billing";
 import {NextRequest,NextResponse} from "next/server";
 import {z} from "zod";
@@ -8,13 +9,9 @@ export async function GET(){const s=await getSession();if(!s)return NextResponse
  const subscriptionGate=await paidFeatureResponse(s);if(subscriptionGate)return subscriptionGate;if(s.role==="CUSTOMER")return NextResponse.json({error:"Forbidden."},{status:403});
  // License identifiers are sensitive. Return them only to company owner/admin
  // or the driver viewing their own profile.
- const canViewLicense=["OWNER","ADMIN","DRIVER"].includes(s.role);
  const drivers=await prisma.driver.findMany({
    where:s.role==="DRIVER"?{companyId:s.companyId,userId:s.userId}:{companyId:s.companyId},
-   select:{
-     id:true,companyId:true,name:true,phone:true,active:true,userId:true,
-     ...(canViewLicense?{licenseNumber:true}:{})
-   },
+   select:driverDirectoryProjection(s),
    orderBy:{name:"asc"}
  });
  return NextResponse.json(drivers,{headers:{"Cache-Control":"private, no-store"}});}
