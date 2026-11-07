@@ -9,6 +9,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test:entitlements": "node --import tsx --test tests/subscription-entitlement.test.ts",
+    "test:security": "node --import tsx --test tests/*.test.ts",
     "db:validate": "prisma validate",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
