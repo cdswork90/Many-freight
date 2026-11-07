@@ -1,3 +1,5 @@
+import {shipmentScope,driverShipmentProjection} from "@/lib/tenant-scope";
+import {paidFeatureResponse} from "@/lib/billing";
 import { NextRequest,NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
@@ -5,12 +7,24 @@ import { getSession } from "@/lib/auth";
 const CreateShipment=z.object({reference:z.string().min(1),pickupAddress:z.string().min(1),dropoffAddress:z.string().min(1),customerId:z.string().optional(),freightType:z.string().default("General Freight"),rateCents:z.number().int().nonnegative().default(0),description:z.string().optional()});
 export async function GET(){
  const session=await getSession();if(!session)return NextResponse.json({error:"Authentication required."},{status:401});
- const where:any={companyId:session.companyId};if(session.role==="DRIVER")where.driver={userId:session.userId};if(session.role==="CUSTOMER")where.customer={userId:session.userId};
+ const subscriptionGate=await paidFeatureResponse(session);if(subscriptionGate)return subscriptionGate;
+ const where=shipmentScope(session);
+ // A driver needs route, assignment and milestone details, not the customer
+ // contract rate, VIN or customer contact details from the full database row.
+ if(session.role==="DRIVER"){
+   const shipments=await prisma.shipment.findMany({
+     where,
+     select:driverShipmentProjection,
+     orderBy:{createdAt:"desc"}
+   });
+   return NextResponse.json(shipments,{headers:{"Cache-Control":"private, no-store"}});
+ }
  const shipments=await prisma.shipment.findMany({where,include:{customer:{select:{id:true,name:true,phone:true}},driver:{select:{id:true,name:true}}},orderBy:{createdAt:"desc"}});
- return NextResponse.json(shipments);
+ return NextResponse.json(shipments,{headers:{"Cache-Control":"private, no-store"}});
 }
 export async function POST(req:NextRequest){
  const session=await getSession();if(!session)return NextResponse.json({error:"Authentication required."},{status:401});
+ const subscriptionGate=await paidFeatureResponse(session);if(subscriptionGate)return subscriptionGate;
  if(!["OWNER","ADMIN","DISPATCHER"].includes(session.role))return NextResponse.json({error:"Insufficient role permissions."},{status:403});
  const parsed=CreateShipment.safeParse(await req.json());if(!parsed.success)return NextResponse.json({error:parsed.error.flatten()},{status:400});
  const data=parsed.data;

@@ -1,20 +1,16 @@
 import { prisma } from "@/lib/prisma";
 import { SessionUser } from "@/lib/auth";
+import { hasPaidOperationalAccess } from "@/lib/subscription-entitlement";
 
 export type PaidFeature = "LOAD_BOARD" | "GPS_LIVE" | "REPORTS_EXPORT" | "ADVANCED_DISPATCH";
-const entitledStatuses = ["ACTIVE", "TRIALING"];
 
 export async function checkPaidAccess(session: SessionUser) {
   const subscription = await prisma.subscription.findUnique({
     where: { companyId: session.companyId },
   });
-  // A paid or trialing status is insufficient without a verified subscription
-  // identity and an unexpired period end. Fail closed if either is missing.
-  const active = !!subscription &&
-    entitledStatuses.includes(subscription.status) &&
-    !!subscription.stripeSubscriptionId &&
-    !!subscription.currentPeriodEnd &&
-    subscription.currentPeriodEnd > new Date();
+  // Only an unexpired, verified ACTIVE subscription can access live data.
+  // TRIALING and all other statuses remain restricted to billing/demo flows.
+  const active = hasPaidOperationalAccess(subscription);
   return { active, status: subscription?.status ?? "INCOMPLETE", subscription };
 }
 

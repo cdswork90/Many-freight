@@ -36,5 +36,43 @@ jobs:
         run: npx prisma generate
       - name: Typecheck
         run: npm run typecheck
+      - name: Test subscription and tenant privacy
+        run: npm run test:security
       - name: Build Next.js
         run: npm run build
+  integration:
+    needs: build
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: many_freight_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: disposable-ci-only-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d many_freight_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: source-preparation
+    env:
+      DATABASE_URL: postgresql://postgres:disposable-ci-only-password@127.0.0.1:5432/many_freight_test?schema=public
+      AUTH_SECRET: disposable-ci-auth-secret-do-not-reuse-123456789
+      APP_URL: http://127.0.0.1:3100
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Build disposable test schema
+        run: npx prisma db push
+      - name: Check carrier broker and driver API isolation
+        run: npm run test:tenant-api
