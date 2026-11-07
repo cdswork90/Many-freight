@@ -19,6 +19,7 @@ const origin = "http://127.0.0.1:3100";
 let logTail = "";
 const server = spawn("npm", ["run", "dev", "--", "-p", "3100"], {
   cwd: process.cwd(), env: { ...process.env, NEXT_TELEMETRY_DISABLED: "1" },
+  detached: process.platform !== "win32",
   stdio: ["ignore", "pipe", "pipe"],
 });
 function rememberLog(chunk: Buffer) { logTail = (logTail + chunk.toString()).slice(-2500); }
@@ -182,6 +183,13 @@ run().then(
   () => console.log("PASS: all disposable-database HTTP isolation checks"),
   err => { console.error("FAILED: HTTP tenant tests", err); process.exitCode=1; },
 ).finally(async () => {
-  server.kill("SIGTERM");
+  // npm spawns a Next.js child process; terminate the whole disposable
+  // process group so CI does not hang after the assertions finish.
+  if (process.platform !== "win32" && server.pid) {
+    try { process.kill(-server.pid, "SIGTERM"); }
+    catch { server.kill("SIGTERM"); }
+  } else {
+    server.kill("SIGTERM");
+  }
   await prisma.$disconnect();
 });
